@@ -1,0 +1,24 @@
+:global SystemName
+:global MailTo
+:global SftpUrl
+:global SftpUser
+:local FilePath ($SystemName . "-" . [:pick [/system clock get date] 4 6] . [:pick [/system clock get date] 0 3] . [:pick [/system clock get date] 7 11]);
+:local Files [ :toarray "" ];
+
+/export file=$FilePath;
+/system backup save name=$FilePath;
+
+:while ([ :len [/file find where name=($FilePath . ".backup") ] ] = 0) do={
+  delay 100ms;
+}
+
+:set Files ($Files, ($FilePath . ".rsc"));
+:set Files ($Files, ($FilePath . ".backup"));
+
+:foreach File in=[ $Files ] do={
+  /tool fetch upload=yes url=([$SftpUrl] . [$File]) src-path=$File user=$SftpUser;
+  /file remove $File;
+}
+
+/tool e-mail send to=$MailTo subject=([$SystemName] . " Backup " . [/system clock get date]) body="Backup files of $SystemName uploaded to SFTP server";
+:log info ("System Backup emailed at " . [/sys cl get time] . " " . [/sys cl get date])
